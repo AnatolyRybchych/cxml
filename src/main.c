@@ -8,11 +8,16 @@ bool xml_iter_tag(
     void (*on_tag)(const StrChunk *tag_name, const StrChunk *innert_text, const StrChunk *attributes, void *user_data), 
     void *user_data);
 
+bool xml_iter_attributes(const StrChunk *source, 
+    void (*on_attribute)(const StrChunk *attribute_name, const StrChunk *attribute_value, void *user_data), 
+    void *user_data);
+
 void print_tag(const StrChunk *tag_name, const StrChunk *innert_text, const StrChunk *attributes, void *user_data);
+void print_attributes(const StrChunk *attribute_name, const StrChunk *attribute_value, void *user_data);
 
 int main(){
     VAR_STR_CHUNK(,chunk, L""
-    "<tag attribute1>dsd</tag>"
+    "<tag attribute1 = \"value\">dsd</tag>"
     );
 
     if(xml_iter_tag(&chunk, print_tag, NULL)){
@@ -23,6 +28,8 @@ int main(){
     }
     return 0;
 }
+
+
 
 bool xml_iter_tag(
     const StrChunk *source, 
@@ -92,7 +99,56 @@ void print_tag(const StrChunk *tag_name, const StrChunk *innert_text, const StrC
     user_data = user_data; //unused
 
     printf("<%.*ls", (int)(tag_name->end - tag_name->beg), tag_name->beg);
-    printf("{%.*ls}>", (int)(attributes->end - attributes->beg), attributes->beg);
+    xml_iter_attributes(attributes, print_attributes, NULL);
+    printf(">");
     printf("%.*ls", (int)(innert_text->end - innert_text->beg), innert_text->beg);
     printf("</%.*ls>", (int)(tag_name->end - tag_name->beg), tag_name->beg);
+}
+
+void print_attributes(const StrChunk *attribute_name, const StrChunk *attribute_value, void *user_data){
+    user_data = user_data; //unused
+
+    printf(" %.*ls", (int)(attribute_name->end - attribute_name->beg), attribute_name->beg);
+    printf("=\"%.*ls\"", (int)(attribute_value->end - attribute_value->beg), attribute_value->beg);
+}
+
+bool xml_iter_attributes(const StrChunk *source, 
+    void (*on_attribute)(const StrChunk *attribute_name, const StrChunk *attribute_value, void *user_data), 
+    void *user_data){
+    StrChunk cp = *source;
+
+    VAR_STR_CHUNK(static, attrib_name_end, L" \n\t\v\f\r=");
+    VAR_STR_CHUNK(static, eq, L"=");
+    VAR_STR_CHUNK(static, quotes, L"\"");
+
+    while (cp.beg < cp.end){
+        StrChunk attribute_name;
+        StrChunk attribute_value;
+        sc_skip_all_whitespaces(&cp);
+        sc_copy_all_to(&cp, &attribute_name, &attrib_name_end);
+        cp.beg = attribute_name.end;
+        if(cp.beg >= cp.end) return true;
+        sc_skip_all_whitespaces(&cp);
+        if(*cp.beg == L'='){
+            bool valid_value = sc_skip_start_matches_all(
+                &cp,
+                SC_ONE_IN, &eq,
+                SC_MAYBE_SOME_IN, sc_get_whitespaces(),
+                SC_ONE_IN, &quotes,
+                SC_STOP);
+            if(!valid_value) return false;
+            sc_copy_all_to(&cp, &attribute_value, &quotes);
+            cp.beg = attribute_value.end;
+            on_attribute(&attribute_name, &attribute_value, user_data);
+            cp.beg++;
+        }
+        else{
+            attribute_value = (StrChunk){
+                .beg = cp.beg,
+                .end = cp.end
+            };
+            on_attribute(&attribute_name, &attribute_value, user_data);
+        }
+    }
+    return true;    
 }

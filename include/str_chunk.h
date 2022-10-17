@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <wchar.h>
+#include <math.h>
 
 #define SC_WHITE_SPACES L" \n\t\v\f\r"
 
@@ -32,6 +33,15 @@ void sc_iter_split(const StrChunk *source, void (*on_chunk)(const StrChunk *chun
 bool sc_skip_to_start_matches_all(StrChunk *source, StrChunkCondition condition1, const StrChunk *sample1, ...);
 bool sc_skip_to_start_matches_all_including(StrChunk *source, StrChunkCondition condition1, const StrChunk *sample1, ...);
 bool sc_is_empty(const StrChunk *source);
+bool sc_equals(const StrChunk *source, const wchar_t *wcs);
+bool sc_int(const StrChunk *source, int *result);
+bool sc_double(const StrChunk *source, double *result);
+bool sc_float(const StrChunk *source, float *result);
+bool sc_bool(const StrChunk *source, bool *result);
+bool sc_is_c_name_compatible(const StrChunk *source);
+bool sc_char_is_decimal_digit(wchar_t ch);
+bool sc_char_is_hexidecimal_digit(wchar_t ch);
+bool sc_char_is_period(wchar_t ch);
 
 struct StrChunk{
     const wchar_t *beg;

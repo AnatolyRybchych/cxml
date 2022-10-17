@@ -7,6 +7,25 @@ void print_tag(const StrChunk *tag_name, const StrChunk *innert_text, const StrC
 void print_attributes(const StrChunk *attribute_name, const StrChunk *attribute_value, void *user_data);
 
 int main(){
+
+    while (true){
+        bool val = false;
+        wchar_t buffer[255];
+        scanf("%ls", buffer);
+        StrChunk chunk = {
+            .beg = buffer,
+            .end = buffer + wcslen(buffer)
+        };
+        
+        if(sc_bool(&chunk, &val)){
+            printf("value: %d\n", val);
+        }
+        else{
+            printf("error\n");
+        }
+    }
+    
+
     VAR_STR_CHUNK(chunk, L""
     "<tag attib=\"value\"></tag>"
     );

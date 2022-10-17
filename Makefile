@@ -1,6 +1,7 @@
 
 objects	+= main.o
 objects	+= str_chunk.o
+objects	+= cxml.o
 
 build: $(addprefix obj/, $(objects))
 	gcc -Iinclude -ggdb -Wall -Wextra -Werror -pedantic -o run.exe $^

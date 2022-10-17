@@ -2,8 +2,9 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+
 const StrChunk *sc_get_whitespaces(void){
-    static wchar_t _white_spaces[] = L" \n\t\v\f\r";
+    static wchar_t _white_spaces[] = SC_WHITE_SPACES;
     static StrChunk white_spaces = {
         .beg = _white_spaces,
         .end = _white_spaces + sizeof(_white_spaces) / sizeof(*_white_spaces) - 1 
@@ -132,6 +133,11 @@ void sc_copy_all_to(const StrChunk *source, StrChunk *destination, const StrChun
     destination->end = cp.beg;
 }
 
+void sc_skip_copy_all_to(StrChunk *source, StrChunk *destination, const StrChunk *characters){
+    sc_copy_all_to(source, destination, characters);
+    source->beg = destination->end;
+}
+
 void sc_iter_split(const StrChunk *source, void (*on_chunk)(const StrChunk *chunk, void *user_data), const StrChunk *delimiters, void *user_data){
     StrChunk chunk = {
         .beg = source->beg,
@@ -177,4 +183,8 @@ bool sc_skip_to_start_matches_all_including(StrChunk *source, StrChunkCondition 
         }
     }
     return false;
+}
+
+bool sc_is_empty(const StrChunk *source){
+    return source->beg >= source->end;
 }

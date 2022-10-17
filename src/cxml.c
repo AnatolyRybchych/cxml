@@ -14,10 +14,7 @@ static bool skip_open_tag_open(StrChunk *source);
 static bool is_simple_tag_end(const StrChunk *source);
 static bool skip_attribute_to_value(StrChunk *source);
 
-bool cxml_iter_tag(
-    const StrChunk *source, 
-    void (*on_tag)(const StrChunk *tag_name, const StrChunk *inner_text, const StrChunk *attributes, void *user_data), 
-    void *user_data){
+bool cxml_iter_tag(const StrChunk *source, CXML_OnTagHandler on_tag, void *user_data){
     
     StrChunk tag_name, inner_text, attributes;
     StrChunk cp = *source;
@@ -39,9 +36,7 @@ bool cxml_iter_tag(
     return true;
 }
 
-bool cxml_iter_attributes(const StrChunk *source, 
-    void (*on_attribute)(const StrChunk *attribute_name, const StrChunk *attribute_value, void *user_data), 
-    void *user_data){
+bool cxml_iter_attributes(const StrChunk *source, CXML_OnAttributeHandler on_attribute, void *user_data){
     StrChunk cp = *source;
 
     while (cp.beg < cp.end){

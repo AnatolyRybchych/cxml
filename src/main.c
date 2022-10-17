@@ -8,7 +8,7 @@ void print_attributes(const StrChunk *attribute_name, const StrChunk *attribute_
 
 int main(){
     VAR_STR_CHUNK(chunk, L""
-    "<tag attib=\"value\"></tag>  sdsd"
+    "<tag attib=\"value\"></tag>"
     );
 
     StrChunk actual;

@@ -10,28 +10,37 @@ STATIC_VAR_STR_CHUNK(eq, L"=");
 STATIC_VAR_STR_CHUNK(quotes, L"\"");
 
 static bool skip_to_close_tag(StrChunk *chunk, const StrChunk *close_tag_name);
+static bool skip_close_tag(StrChunk *chunk, const StrChunk *close_tag_name);
 static bool skip_open_tag_open(StrChunk *source);
-static bool is_simple_tag_end(const StrChunk *source);
+static bool skip_simple_tag_end(StrChunk *source);
 static bool skip_attribute_to_value(StrChunk *source);
 
-bool cxml_iter_tag(const StrChunk *source, CXML_OnTagHandler on_tag, void *user_data){
-    
+bool cxml_iter_tag(const StrChunk *source, StrChunk *actualChunk, CXML_OnTagHandler on_tag, void *user_data){
     StrChunk tag_name, inner_text, attributes;
     StrChunk cp = *source;
+    sc_skip_all_whitespaces(&cp);
+    StrChunk actual = {.beg = cp.beg, .end = cp.end};
 
     if(skip_open_tag_open(&cp) == false) return false;;
 
     sc_skip_copy_all_to(&cp, &tag_name, &tag_name_end);
     sc_skip_copy_all_to(&cp, &attributes, &tag_end);
+    sc_skip_one(&cp, &tag_end, false);
 
-    if(is_simple_tag_end(&cp)){
+    if(skip_simple_tag_end(&cp)){
        inner_text = (StrChunk){cp.beg, cp.beg};
+       actual.end = cp.beg;
     }
     else{
         inner_text.beg = cp.beg;
-        if(skip_to_close_tag(&cp, &tag_name)) inner_text.end = cp.beg;
-        else inner_text.end = source->end;
+        if(skip_to_close_tag(&cp, &tag_name)){
+            inner_text.end = cp.beg;
+            skip_close_tag(&cp, &tag_name);
+            actual.end = cp.beg;
+        }
+        else inner_text.end = source->beg;
     }
+    *actualChunk = actual;
     on_tag(&tag_name, &inner_text, &attributes, user_data);
     return true;
 }
@@ -73,7 +82,22 @@ static bool skip_to_close_tag(StrChunk *chunk, const StrChunk *close_tag_name){
         SC_MAYBE_SOME_IN, sc_get_whitespaces(),
         SC_SEQUANCE, close_tag_name,
         SC_MAYBE_SOME_IN, sc_get_whitespaces(),
-        SC_ONE_IN, &gt
+        SC_ONE_IN, &gt,
+        SC_STOP
+    );
+}
+
+static bool skip_close_tag(StrChunk *chunk, const StrChunk *close_tag_name){
+    return sc_skip_start_matches_all(
+        chunk,
+        SC_ONE_IN, &lt,
+        SC_MAYBE_SOME_IN, sc_get_whitespaces(),
+        SC_ONE_IN, slash,
+        SC_MAYBE_SOME_IN, sc_get_whitespaces(),
+        SC_SEQUANCE, close_tag_name,
+        SC_MAYBE_SOME_IN, sc_get_whitespaces(),
+        SC_ONE_IN, &gt,
+        SC_STOP
     );
 }
 
@@ -87,13 +111,13 @@ static bool skip_open_tag_open(StrChunk *source){
     );
 }
 
-static bool is_simple_tag_end(const StrChunk *source){
-    return sc_start_matches_all(
+static bool skip_simple_tag_end(StrChunk *source){
+    return sc_skip_start_matches_all(
         source,
         SC_MAYBE_SOME_IN, sc_get_whitespaces(),
-        SC_ONE_IN, &lt,
-        SC_MAYBE_SOME_IN, sc_get_whitespaces(),
         SC_ONE_IN, &slash,
+        SC_MAYBE_SOME_IN, sc_get_whitespaces(),
+        SC_ONE_IN, &gt,
         SC_STOP
     );
 }

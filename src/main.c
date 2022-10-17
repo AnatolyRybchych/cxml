@@ -8,10 +8,14 @@ void print_attributes(const StrChunk *attribute_name, const StrChunk *attribute_
 
 int main(){
     VAR_STR_CHUNK(chunk, L""
-    "<tag attribute1 = \"value\">dsd</tag>"
+    "<tag attib=\"value\"></tag>  sdsd"
     );
 
-    if(cxml_iter_tag(&chunk, print_tag, NULL)) printf("SUCCESS!\n");
+    StrChunk actual;
+    if(cxml_iter_tag(&chunk, &actual, print_tag, NULL)){
+        printf("SUCCESS!\n");
+        printf("actual tag: \"%.*ls\"", (int)(actual.end - actual.beg), actual.beg);
+    }
     else printf("ERROR: parsing failed\n");
     
     return 0;

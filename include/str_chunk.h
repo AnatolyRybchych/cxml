@@ -13,8 +13,9 @@ enum StrChunkCondition{
     SC_SOME_NOT_IN,
     SC_ONE_IN,
     SC_ONE_NOT_IN,
+    SC_ONE_MORE_NOT_IN,
     SC_SEQUANCE,
-    SC_STOP
+    SC_STOP,
 };
 
 bool sc_contains(const StrChunk *source, wchar_t character);
@@ -28,8 +29,13 @@ int sc_skip_all_to_whitespace(StrChunk *source);
 bool sc_starts_with_sc(const StrChunk *source, const StrChunk *sample);
 bool sc_skip_starts_with_sc(StrChunk *source, const StrChunk *sample);
 bool sc_skip_start_matches_all(StrChunk *source, StrChunkCondition condition1, const StrChunk *sample1, ...);
+bool sc_skip_start_matches_all_v(StrChunk *source, StrChunkCondition condition1, const StrChunk *sample1, va_list argp);
 bool sc_start_matches_all(const StrChunk *source, StrChunkCondition condition1, const StrChunk *sample1, ...);
 bool sc_skip_start_matches_condition(StrChunk *source, StrChunkCondition condition, const StrChunk *sample);
+void sc_copy_all_to(const StrChunk *source, StrChunk *destination, const StrChunk *characters);
+void sc_iter_split(const StrChunk *source, void (*on_chunk)(const StrChunk *chunk, void *user_data), const StrChunk *delimiters, void *user_data);
+bool sc_skip_to_start_matches_all(StrChunk *source, StrChunkCondition condition1, const StrChunk *sample1, ...);
+bool sc_skip_to_start_matches_all_including(StrChunk *source, StrChunkCondition condition1, const StrChunk *sample1, ...);
 
 struct StrChunk{
     const wchar_t *beg;

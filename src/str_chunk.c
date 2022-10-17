@@ -69,43 +69,37 @@ bool sc_skip_starts_with_sc(StrChunk *source, const StrChunk *sample){
 
 #define SC_CONDITION_SIZE (sizeof(StrChunkCondition) + sizeof(StrChunk*))
 bool sc_skip_start_matches_all(StrChunk *source, StrChunkCondition condition1, const StrChunk *sample1, ...){
-    StrChunk cp = *source;
+    va_list argp;   
+    va_start(argp, sample1);
 
-    StrChunkCondition *curr_condition = &condition1;
-    const StrChunk **curr_sample = &sample1;
-
-    while (*curr_condition < SC_STOP){
-        if(sc_skip_start_matches_condition(&cp, *curr_condition, *curr_sample) == false){
-            return false;
-        }
-        curr_condition = (StrChunkCondition*)((char*)curr_condition + SC_CONDITION_SIZE);
-        curr_sample = (const StrChunk**)((char*)curr_condition + SC_CONDITION_SIZE);
-    }
-
-    *source = cp;
-    return true;
+    return sc_skip_start_matches_all_v(source, condition1, sample1, argp);
 }
 
-bool sc_start_matches_all(const StrChunk *source, StrChunkCondition condition1, const StrChunk *sample1, ...){
+bool sc_skip_start_matches_all_v(StrChunk *source, StrChunkCondition condition1, const StrChunk *sample1, va_list argp){
     StrChunk cp = *source;
     if(condition1 == SC_STOP || !sc_skip_start_matches_condition(&cp, condition1, sample1)){
         return false;
     }
 
-    va_list argp;   
-    va_start(argp, sample1);
-
     while (true){
         StrChunkCondition condition = va_arg(argp, StrChunkCondition);
-        if(condition >= SC_STOP) return true;
+        if(condition >= SC_STOP) {
+            *source = cp;
+            return true;
+        }
         const StrChunk *sample = va_arg(argp, const StrChunk *);
-
-        //printf("%d\n", condition);
         if(sc_skip_start_matches_condition(&cp, condition, sample) == false){
             return false;
         }
     }
-    return true;
+}
+
+bool sc_start_matches_all(const StrChunk *source, StrChunkCondition condition1, const StrChunk *sample1, ...){
+    StrChunk cp = *source;
+    va_list argp;   
+    va_start(argp, sample1);
+
+    return sc_skip_start_matches_all_v(&cp, condition1, sample1, argp);
 }
 
 bool sc_skip_start_matches_condition(StrChunk *source, StrChunkCondition condition, const StrChunk *sample){
@@ -122,9 +116,65 @@ bool sc_skip_start_matches_condition(StrChunk *source, StrChunkCondition conditi
         return sc_skip_one(source, sample, false);
     case SC_ONE_NOT_IN:
         return sc_skip_one(source, sample, true);
+    case SC_ONE_MORE_NOT_IN:
+        return sc_skip_all(source, sample, true) > 0;
     case SC_SEQUANCE:
         return sc_skip_starts_with_sc(source, sample);
     default:
         return false;
     }
+}
+
+void sc_copy_all_to(const StrChunk *source, StrChunk *destination, const StrChunk *characters){
+    StrChunk cp = *source; 
+    sc_skip_all(&cp, characters, true);
+    destination->beg = source->beg;
+    destination->end = cp.beg;
+}
+
+void sc_iter_split(const StrChunk *source, void (*on_chunk)(const StrChunk *chunk, void *user_data), const StrChunk *delimiters, void *user_data){
+    StrChunk chunk = {
+        .beg = source->beg,
+        .end = source->end
+    };
+
+    while (chunk.end < source->end){
+        if(sc_contains(delimiters, *chunk.end)){
+            on_chunk(&chunk, user_data);
+            chunk.beg = chunk.end + 1; 
+        }
+        chunk.end++;
+    }
+    if(chunk.beg != chunk.end){
+        on_chunk(&chunk, user_data);
+    }
+}
+
+
+bool sc_skip_to_start_matches_all(StrChunk *source, StrChunkCondition condition1, const StrChunk *sample1, ...){
+    StrChunk cp = *source;
+    while (cp.beg < source->end){
+        va_list argp;
+        va_start(argp, sample1);
+        StrChunk cp_cp = cp;
+        if(sc_skip_start_matches_all_v(&cp_cp, condition1, sample1, argp)){
+            *source = cp;
+            return true;
+        }
+        cp.beg++;
+    }
+    return false;
+}
+
+bool sc_skip_to_start_matches_all_including(StrChunk *source, StrChunkCondition condition1, const StrChunk *sample1, ...){
+    StrChunk cp = *source;
+    while (source->beg < source->end){
+        va_list argp;
+        va_start(argp, sample1);
+        if(sc_skip_start_matches_all_v(&cp, condition1, sample1, argp)){
+            *source = cp;
+            return true;
+        }
+    }
+    return false;
 }

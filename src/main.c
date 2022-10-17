@@ -13,8 +13,6 @@ void print_tag(StrChunk tag_name, void *user_data);
 void print_attribute(StrChunk attribute_name, StrChunk attribute_data, void *user_data);
 void print_text(StrChunk text, void *user_data);
 
-
-
 int main(){
     wchar_t data[] = L""
     "<tag></tag>";
@@ -24,12 +22,32 @@ int main(){
         .end = data + wcslen(data)
     };
 
-    if(!xml_iter_tag(chunk, print_tag, print_attribute, print_text, NULL)){
-        printf("ERROR: parsing failed\n");
+    #define CAR_STR_CHUNK(NAME, WCS) wchar_t _##NAME[] = WCS;StrChunk NAME = {.beg = _##NAME, .end = _##NAME + wcslen(_##NAME)}
+
+    CAR_STR_CHUNK(tag, L"tag");
+    CAR_STR_CHUNK(open_tag, L"<");
+    CAR_STR_CHUNK(close_tag, L">");
+
+    if(sc_start_matches_all(&chunk, 
+        SC_MAYBE_SOME_IN, sc_get_whitespaces(),
+        SC_ONE_IN, &open_tag,
+        SC_SEQUANCE, &tag,
+        SC_MAYBE_SOME_IN, sc_get_whitespaces(),
+        SC_ONE_IN, &close_tag,
+        SC_STOP
+    )){
+        printf("MATCHES ALL!\n");
     }
     else{
-        printf("SUCCESS!\n");
+        printf("DOESNT MATCHES ALL!\n");
     }
+
+    // if(!xml_iter_tag(chunk, print_tag, print_attribute, print_text, NULL)){
+    //     printf("ERROR: parsing failed\n");
+    // }
+    // else{
+    //     printf("SUCCESS!\n");
+    // }
 
 
     return 0;

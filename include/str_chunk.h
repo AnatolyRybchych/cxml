@@ -5,7 +5,7 @@
 #include <wchar.h>
 
 typedef struct StrChunk StrChunk;
-typedef int StrChunkCondition;
+typedef unsigned int StrChunkCondition;
 enum StrChunkCondition{
     SC_MAYBE_SOME_IN,
     SC_MAYBE_SOME_NOT_IN,

@@ -1,4 +1,6 @@
 #include <str_chunk.h>
+#include <stdio.h>
+#include <stdarg.h>
 
 const StrChunk *sc_get_whitespaces(void){
     static wchar_t _white_spaces[] = L" \n\t\v\f\r";
@@ -13,7 +15,7 @@ const StrChunk *sc_get_whitespaces(void){
 bool sc_contains(const StrChunk *source, wchar_t character){
     const wchar_t *curr = source->beg;
     while (curr < source->end){
-        if(*curr == character) return true;
+        if(*curr++ == character) return true;
     }
     return false;
 }
@@ -27,6 +29,7 @@ int sc_skip_all(StrChunk *source, const StrChunk *characters, bool reverse_chara
 }
 
 bool sc_skip_one(StrChunk *source, const StrChunk *characters, bool reverse_characters){
+    if(source->end - source->beg < 1) return false;
     if(sc_contains(characters, *source->beg) != reverse_characters){
         source->beg++;
         return true;
@@ -60,7 +63,7 @@ bool sc_skip_starts_with_sc(StrChunk *source, const StrChunk *sample){
             return false;
         }
     }
-    source->beg = sample_curr;
+    source->beg = source_curr;
     return true;
 }
 
@@ -71,7 +74,7 @@ bool sc_skip_start_matches_all(StrChunk *source, StrChunkCondition condition1, c
     StrChunkCondition *curr_condition = &condition1;
     const StrChunk **curr_sample = &sample1;
 
-    while (*curr_condition <= SC_STOP){
+    while (*curr_condition < SC_STOP){
         if(sc_skip_start_matches_condition(&cp, *curr_condition, *curr_sample) == false){
             return false;
         }
@@ -85,16 +88,22 @@ bool sc_skip_start_matches_all(StrChunk *source, StrChunkCondition condition1, c
 
 bool sc_start_matches_all(const StrChunk *source, StrChunkCondition condition1, const StrChunk *sample1, ...){
     StrChunk cp = *source;
+    if(condition1 == SC_STOP || !sc_skip_start_matches_condition(&cp, condition1, sample1)){
+        return false;
+    }
 
-    StrChunkCondition *curr_condition = &condition1;
-    const StrChunk **curr_sample = &sample1;
+    va_list argp;   
+    va_start(argp, sample1);
 
-    while (*curr_condition <= SC_STOP){
-        if(sc_skip_start_matches_condition(&cp, *curr_condition, *curr_sample) == false){
+    while (true){
+        StrChunkCondition condition = va_arg(argp, StrChunkCondition);
+        if(condition >= SC_STOP) return true;
+        const StrChunk *sample = va_arg(argp, const StrChunk *);
+
+        //printf("%d\n", condition);
+        if(sc_skip_start_matches_condition(&cp, condition, sample) == false){
             return false;
         }
-        curr_condition = (StrChunkCondition*)((char*)curr_condition + SC_CONDITION_SIZE);
-        curr_sample = (const StrChunk**)((char*)curr_condition + SC_CONDITION_SIZE);
     }
     return true;
 }

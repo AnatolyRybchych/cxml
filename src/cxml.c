@@ -15,6 +15,20 @@ static bool skip_open_tag_open(StrChunk *source);
 static bool skip_simple_tag_end(StrChunk *source);
 static bool skip_attribute_to_value(StrChunk *source);
 
+static bool _write_to_file(CXML_StringWriter *self, const StrChunk *str);
+static CXML_StringWriter _writer_to_file(FILE *file);
+static bool _wcs_serialize(const CXML_Serializable *self, CXML_StringWriter *writer);
+static CXML_Serializable _wcs_serializable(const wchar_t *wcs);
+
+struct CXML_DefaultWrappers cxml_def = {
+    .writer = {
+        .to_file = _writer_to_file,
+    },
+    .serializable = {
+        .wcs = _wcs_serializable,
+    },
+};
+
 bool cxml_iter_tag(const StrChunk *source, StrChunk *actualChunk, CXML_OnTagHandler on_tag, void *user_data){
     StrChunk tag_name, inner_text, attributes;
     StrChunk cp = *source;
@@ -71,6 +85,14 @@ bool cxml_iter_attributes(const StrChunk *source, CXML_OnAttributeHandler on_att
         }
     }
     return true;    
+}
+
+bool cxml_write(CXML_StringWriter *writer, const StrChunk *str){
+    return writer->write(writer, str);
+}
+
+bool cxml_serialize(const CXML_Serializable *serializable, CXML_StringWriter *writer){
+    return serializable->serialize(serializable, writer);
 }
 
 static bool skip_to_close_tag(StrChunk *chunk, const StrChunk *close_tag_name){
@@ -130,4 +152,40 @@ static bool skip_attribute_to_value(StrChunk *source){
         SC_ONE_IN, &quotes,
         SC_STOP
     );
+}
+
+static bool _write_to_file(CXML_StringWriter *self, const StrChunk *str){
+    if(self == NULL || self->data == NULL) return false;
+    int chars_cnt = str->end - str->beg;
+    int bytes_cnt = chars_cnt / sizeof(wchar_t);
+    if(chars_cnt > 0){
+        return fprintf(
+            (FILE*)self->data, "%.*ls", 
+            chars_cnt, str->beg) == bytes_cnt;
+    }
+    else{
+        return true;
+    }
+}
+
+static CXML_StringWriter _writer_to_file(FILE *file){
+    return (CXML_StringWriter){
+        .data = file,
+        .write = _write_to_file,
+    };
+}
+static bool _wcs_serialize(const CXML_Serializable *self, CXML_StringWriter *writer){
+    const wchar_t *wcs = (const wchar_t *)self->data;
+    StrChunk chunk = {
+        .beg = wcs,
+        .end = wcs + wcslen(wcs),
+    };
+    return cxml_write(writer, &chunk);
+}
+
+static CXML_Serializable _wcs_serializable(const wchar_t *wcs){
+    return (CXML_Serializable){
+        .data = wcs,
+        .serialize = _wcs_serialize,
+    };
 }

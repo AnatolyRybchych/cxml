@@ -4,7 +4,6 @@
 #include <str_chunk.h>
 #include <stdio.h>
 #include <string.h>
-#include <alloca.h>
 
 typedef struct CXML_StringWriter CXML_StringWriter;
 typedef struct CXML_Serializable CXML_Serializable;

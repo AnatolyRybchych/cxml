@@ -1,16 +1,16 @@
 
-objects	+= main.o
+
+
 objects	+= str_chunk.o
 objects	+= cxml.o
 
-build: $(addprefix obj/, $(objects))
-	gcc -Iinclude -ggdb -Wall -Wextra -Werror -pedantic -o run.exe $^
+build: build_dll build_static
+
+build_dll: $(addprefix obj/, $(objects))
+	gcc -shared -Iinclude -Wall -Wextra -Werror -pedantic -o ./bin/libcxml.dll $^
+
+build_static:
+	ar -crs ./lib/libcxml.a $^
 
 obj/%.o:src/%.c
-	gcc -Iinclude -ggdb -c -Wall -Wextra -Werror -pedantic -o $@ $^
-
-run: build
-	./run.exe
-
-gdb: build
-	gdb --tui ./run.exe
+	gcc -Iinclude -c -Wall -Wextra -Werror -pedantic -o $@ $^

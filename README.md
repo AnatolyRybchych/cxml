@@ -1,2 +1,2 @@
 cxml 
-elements and attributes iteration without any malloc
+xml serialization/deserialization tool without memmory allocations 

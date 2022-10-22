@@ -10,10 +10,13 @@ objects	+= cxml.o
 build: build_dll build_static
 
 build_dll: $(addprefix obj/, $(objects))
+	@mkdir -p ./bin
 	$(CC) $(LNK_ARGS) -o $(DLL_NAME) $^
 
 build_static:
+	@mkdir -p ./lib
 	ar -crs ./lib/libcxml.a $^
 
 obj/%.o:src/%.c
+	@mkdir -p ./obj
 	$(CC) $(CARGS) -o $@ $^

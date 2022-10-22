@@ -3,6 +3,8 @@
         "cxml.h": "c",
         "stdio.h": "c",
         "str_chunk.h": "c",
-        "wchar.h": "c"
+        "wchar.h": "c",
+        "type_traits": "cpp",
+        "stdbool.h": "c"
     }
 }

@@ -38,6 +38,7 @@ CXML_DEF_DECL(wcs, wchar_t);
 CXML_DEF_DECL(cstr, char);
 CXML_DEF_DECL(tag, CXML_Tag);
 CXML_DEF_DECL(attribute, CXML_Attribute);
+CXML_DEF_DECL(concat, CXML_Concat);
 CXML_DEF_DECL(_float, float);
 CXML_DEF_DECL(_double, double);
 CXML_DEF_DECL(_int, int);
@@ -61,6 +62,7 @@ struct CXML_DefaultWrappers cxml_def = {
         .cstr = cstr_serializable,
         .attribute = attribute_serializable,
         .tag = tag_serializable,
+        .concat = concat_serializable,
         ._float = _float_serializable, 
         ._double = _double_serializable,
         ._bool = _bool_serializable,
@@ -163,6 +165,13 @@ CXML_Serializable cxml_serializable(const void *data, bool (*serialize)(const CX
     return (CXML_Serializable){
         .data = data,
         .serialize = serialize
+    };
+}
+
+CXML_Concat cxml_concat(const CXML_Serializable *first, CXML_Serializable *second){
+    return (CXML_Concat){
+        .first = first,
+        .second = second
     };
 }
 
@@ -331,6 +340,11 @@ static bool attribute_serialize(const CXML_Serializable *self, CXML_StringWriter
     return true;
 }
 
+static bool concat_serialize(const CXML_Serializable *self, CXML_StringWriter *writer){
+    const CXML_Concat *concat = (const CXML_Concat*)self->data;
+    return cxml_serialize(concat->first, writer) && cxml_serialize(concat->second, writer);
+}
+
 SERIALIZE_FORMAT_IMPL(_float, SERIALIZE_BUF_LEN, L"%f", *(float*)self->data)
 SERIALIZE_FORMAT_IMPL(_double, SERIALIZE_BUF_LEN, L"%lf", *(double*)self->data)
 SERIALIZE_FORMAT_IMPL(_int, SERIALIZE_BUF_LEN, L"%i", *(int*)self->data)
@@ -349,6 +363,7 @@ SERIALIZABLE_IMPL(wcs, wchar_t)
 SERIALIZABLE_IMPL(cstr, char)
 SERIALIZABLE_IMPL(attribute, CXML_Attribute)
 SERIALIZABLE_IMPL(tag, CXML_Tag)
+SERIALIZABLE_IMPL(concat, CXML_Concat)
 SERIALIZABLE_IMPL(_float, float)
 SERIALIZABLE_IMPL(_double, double)
 SERIALIZABLE_IMPL(_int, int)

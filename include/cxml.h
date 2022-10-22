@@ -3,6 +3,8 @@
 
 #include <str_chunk.h>
 #include <stdio.h>
+#include <string.h>
+#include <alloca.h>
 
 typedef struct CXML_StringWriter CXML_StringWriter;
 typedef struct CXML_Serializable CXML_Serializable;
@@ -20,6 +22,7 @@ bool cxml_write(CXML_StringWriter *writer, const StrChunk *str);
 bool cxml_serialize(const CXML_Serializable *serializable, CXML_StringWriter *writer);
 CXML_Attribute cxml_attribute(const CXML_Serializable *name, const CXML_Serializable *value);
 CXML_Tag cxml_tag(const CXML_Serializable *name, const CXML_Attribute *attribs, unsigned int attribs_cnt, const CXML_Serializable *value);
+CXML_Serializable cxml_serializable(const void *data, bool (*serialize)(const CXML_Serializable *serializable, CXML_StringWriter *writer));
 
 struct CXML_StringWriter{
     void *data;
@@ -37,8 +40,22 @@ struct CXML_DefaultStringWriters{
 
 struct CXML_DefaultSerializables{
     CXML_Serializable (*wcs)(const wchar_t *wcs);
+    CXML_Serializable (*cstr)(const char *cstr);
     CXML_Serializable (*attribute)(const CXML_Attribute *attrib);
     CXML_Serializable (*tag)(const CXML_Tag *tag);
+    CXML_Serializable (*_float)(const float *_float);
+    CXML_Serializable (*_double)(const double *_double);
+    CXML_Serializable (*_bool)(const bool *_bool);
+    CXML_Serializable (*_int)(const int *_int);
+    CXML_Serializable (*_uint)(const unsigned int*_uint);
+    CXML_Serializable (*_short)(const short int *_short);
+    CXML_Serializable (*_ushort)(const unsigned short int *_ushort);
+    CXML_Serializable (*_long)(const long int *_long);
+    CXML_Serializable (*_ulong)(const unsigned long int *_ulong);
+    CXML_Serializable (*_byte)(const unsigned char *_byte);
+    CXML_Serializable (*_sbyte)(const char *_sbyte);
+    CXML_Serializable (*_char)(const char *_char);
+    CXML_Serializable (*_wchar)(const wchar_t *_wchar);
 };
 
 struct CXML_DefaultWrappers{

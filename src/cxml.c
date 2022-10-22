@@ -1,5 +1,19 @@
 #include <cxml.h>
 
+#define SERIALIZE_DECL(NAME) static bool NAME##_serialize(const CXML_Serializable *self, CXML_StringWriter *writer)
+#define SERIALIZE_FORMAT_IMPL(NAME, BUF_LEN, FMT, ...) SERIALIZE_DECL(NAME){\
+    wchar_t buffer[BUF_LEN];\
+    int chars_cnt = swprintf(buffer, BUF_LEN, FMT, __VA_ARGS__);\
+    StrChunk chunk = {.beg = buffer, .end = buffer + chars_cnt};\
+    return cxml_write(writer, &chunk);\
+}
+
+#define SERIALIZABLE_DECL(NAME, TYPE) static CXML_Serializable NAME##_serializable(const TYPE *NAME)
+#define SERIALIZABLE_IMPL(NAME, TYPE) SERIALIZABLE_DECL(NAME, TYPE) {return cxml_serializable(NAME, NAME##_serialize);}
+#define CXML_DEF_DECL(NAME, TYPE) SERIALIZE_DECL(NAME); SERIALIZABLE_DECL(NAME, TYPE)
+
+#define SERIALIZE_BUF_LEN 64
+
 STATIC_VAR_STR_CHUNK(lt, L"<");
 STATIC_VAR_STR_CHUNK(gt, L">");
 STATIC_VAR_STR_CHUNK(space, L" ");
@@ -15,28 +29,51 @@ static bool skip_close_tag(StrChunk *chunk, const StrChunk *close_tag_name);
 static bool skip_open_tag_open(StrChunk *source);
 static bool skip_simple_tag_end(StrChunk *source);
 static bool skip_attribute_to_value(StrChunk *source);
+static void cp_str_to_wcs(wchar_t *wcs, const char *str, unsigned int cnt);
 
 static bool _write_to_file(CXML_StringWriter *self, const StrChunk *str);
 static CXML_StringWriter _writer_to_file(FILE *file);
 
-static bool _wcs_serialize(const CXML_Serializable *self, CXML_StringWriter *writer);
-static CXML_Serializable _wcs_serializable(const wchar_t *wcs);
-
-static bool _tag_serialize(const CXML_Serializable *self, CXML_StringWriter *writer);
-static CXML_Serializable _tag_serializable(const CXML_Tag *tag);
-
-static bool _attribute_serialize(const CXML_Serializable *self, CXML_StringWriter *writer);
-static CXML_Serializable _attribute_serializable(const CXML_Attribute *attribute);
-
+CXML_DEF_DECL(wcs, wchar_t);
+CXML_DEF_DECL(cstr, char);
+CXML_DEF_DECL(tag, CXML_Tag);
+CXML_DEF_DECL(attribute, CXML_Attribute);
+CXML_DEF_DECL(_float, float);
+CXML_DEF_DECL(_double, double);
+CXML_DEF_DECL(_int, int);
+CXML_DEF_DECL(_uint, unsigned int);
+CXML_DEF_DECL(_short, short int);
+CXML_DEF_DECL(_ushort, unsigned short int);
+CXML_DEF_DECL(_long, long int);
+CXML_DEF_DECL(_ulong, unsigned long int);
+CXML_DEF_DECL(_sbyte, char);
+CXML_DEF_DECL(_byte, unsigned char);
+CXML_DEF_DECL(_char, char);
+CXML_DEF_DECL(_wchar, wchar_t);
+CXML_DEF_DECL(_bool, bool);
 
 struct CXML_DefaultWrappers cxml_def = {
     .writer = {
         .to_file = _writer_to_file,
     },
     .serializable = {
-        .wcs = _wcs_serializable,
-        .attribute = _attribute_serializable,
-        .tag = _tag_serializable,
+        .wcs = wcs_serializable,
+        .cstr = cstr_serializable,
+        .attribute = attribute_serializable,
+        .tag = tag_serializable,
+        ._float = _float_serializable, 
+        ._double = _double_serializable,
+        ._bool = _bool_serializable,
+        ._int = _int_serializable,
+        ._uint = _uint_serializable,
+        ._short = _short_serializable,
+        ._ushort = _ushort_serializable,
+        ._long = _long_serializable,
+        ._ulong = _ulong_serializable,
+        ._byte = _byte_serializable,
+        ._sbyte = _sbyte_serializable,
+        ._char = _char_serializable,
+        ._wchar = _wchar_serializable,
     },
 };
 
@@ -122,6 +159,13 @@ CXML_Tag cxml_tag(const CXML_Serializable *name, const CXML_Attribute *attribs, 
     };
 }
 
+CXML_Serializable cxml_serializable(const void *data, bool (*serialize)(const CXML_Serializable *self, CXML_StringWriter *writer)){
+    return (CXML_Serializable){
+        .data = data,
+        .serialize = serialize
+    };
+}
+
 static bool skip_to_close_tag(StrChunk *chunk, const StrChunk *close_tag_name){
     return sc_skip_to_start_matches_all(
         chunk,
@@ -181,6 +225,13 @@ static bool skip_attribute_to_value(StrChunk *source){
     );
 }
 
+static void cp_str_to_wcs(wchar_t *wcs, const char *str, unsigned int cnt){
+    while (cnt){
+        wcs[cnt] = str[cnt];
+        cnt++;
+    }
+}
+
 static bool _write_to_file(CXML_StringWriter *self, const StrChunk *str){
     if(self == NULL || self->data == NULL) return false;
     int chars_cnt = str->end - str->beg;
@@ -200,7 +251,7 @@ static CXML_StringWriter _writer_to_file(FILE *file){
         .write = _write_to_file,
     };
 }
-static bool _wcs_serialize(const CXML_Serializable *self, CXML_StringWriter *writer){
+static bool wcs_serialize(const CXML_Serializable *self, CXML_StringWriter *writer){
     const wchar_t *wcs = (const wchar_t *)self->data;
     StrChunk chunk = {
         .beg = wcs,
@@ -209,14 +260,32 @@ static bool _wcs_serialize(const CXML_Serializable *self, CXML_StringWriter *wri
     return cxml_write(writer, &chunk);
 }
 
-static CXML_Serializable _wcs_serializable(const wchar_t *wcs){
-    return (CXML_Serializable){
-        .data = wcs,
-        .serialize = _wcs_serialize,
-    };
+
+
+static bool cstr_serialize(const CXML_Serializable *self, CXML_StringWriter *writer){
+    const char *cstr = (const char *)self->data;
+    int len = strlen(cstr);
+    
+    #define CP_BUF_LEN 256
+    wchar_t wcs[CP_BUF_LEN];
+    while (len > CP_BUF_LEN){
+        cp_str_to_wcs(wcs, cstr, CP_BUF_LEN);
+
+        StrChunk chunk = {.beg = wcs, .end = wcs + CP_BUF_LEN + 1};
+        if(!cxml_write(writer, &chunk)) return false; 
+
+        len -= CP_BUF_LEN;
+        cstr += CP_BUF_LEN;
+    }
+
+    cp_str_to_wcs(wcs, cstr, len);
+
+    StrChunk chunk = {.beg = wcs, .end = wcs + len + 1};
+    if(!cxml_write(writer, &chunk)) return false; 
+    else return true;
 }
 
-static bool _tag_serialize(const CXML_Serializable *self, CXML_StringWriter *writer){
+static bool tag_serialize(const CXML_Serializable *self, CXML_StringWriter *writer){
     if(self == NULL || self->data == NULL) return false;
     const CXML_Tag *tag = (const CXML_Tag *)self->data; 
 
@@ -251,14 +320,7 @@ static bool _tag_serialize(const CXML_Serializable *self, CXML_StringWriter *wri
     }
 }
 
-static CXML_Serializable _tag_serializable(const CXML_Tag *tag){
-    return (CXML_Serializable){
-        .data = tag,
-        .serialize = _tag_serialize,
-    };
-}
-
-static bool _attribute_serialize(const CXML_Serializable *self, CXML_StringWriter *writer){
+static bool attribute_serialize(const CXML_Serializable *self, CXML_StringWriter *writer){
     if(self == NULL || self->data == NULL) return false;
     const CXML_Attribute *attribute = (const CXML_Attribute *)self->data;
     if(!cxml_serialize(attribute->name, writer)) return false;
@@ -269,9 +331,34 @@ static bool _attribute_serialize(const CXML_Serializable *self, CXML_StringWrite
     return true;
 }
 
-static CXML_Serializable _attribute_serializable(const CXML_Attribute *attribute){
-    return (CXML_Serializable){
-        .data = attribute,
-        .serialize = _attribute_serialize,
-    };
-}
+SERIALIZE_FORMAT_IMPL(_float, SERIALIZE_BUF_LEN, L"%f", *(float*)self->data)
+SERIALIZE_FORMAT_IMPL(_double, SERIALIZE_BUF_LEN, L"%lf", *(double*)self->data)
+SERIALIZE_FORMAT_IMPL(_int, SERIALIZE_BUF_LEN, L"%i", *(int*)self->data)
+SERIALIZE_FORMAT_IMPL(_uint, SERIALIZE_BUF_LEN, L"%u", *(unsigned int*)self->data)
+SERIALIZE_FORMAT_IMPL(_short, SERIALIZE_BUF_LEN, L"%hi", *(short int*)self->data)
+SERIALIZE_FORMAT_IMPL(_ushort, SERIALIZE_BUF_LEN, L"%hu", *(unsigned short int*)self->data)
+SERIALIZE_FORMAT_IMPL(_long, SERIALIZE_BUF_LEN, L"%li", *(long int*)self->data)
+SERIALIZE_FORMAT_IMPL(_ulong, SERIALIZE_BUF_LEN, L"%lu", *(unsigned long int*)self->data)
+SERIALIZE_FORMAT_IMPL(_sbyte, SERIALIZE_BUF_LEN, L"%hhi", *(char*)self->data)
+SERIALIZE_FORMAT_IMPL(_byte, SERIALIZE_BUF_LEN, L"%hhu", *(unsigned char*)self->data)
+SERIALIZE_FORMAT_IMPL(_char, SERIALIZE_BUF_LEN, L"%c", *(char*)self->data)
+SERIALIZE_FORMAT_IMPL(_wchar, SERIALIZE_BUF_LEN, L"%lc", *(wchar_t*)self->data)
+SERIALIZE_FORMAT_IMPL(_bool, SERIALIZE_BUF_LEN, L"%s", *(bool*)self->data ? "true" : "false")
+
+SERIALIZABLE_IMPL(wcs, wchar_t)
+SERIALIZABLE_IMPL(cstr, char)
+SERIALIZABLE_IMPL(attribute, CXML_Attribute)
+SERIALIZABLE_IMPL(tag, CXML_Tag)
+SERIALIZABLE_IMPL(_float, float)
+SERIALIZABLE_IMPL(_double, double)
+SERIALIZABLE_IMPL(_int, int)
+SERIALIZABLE_IMPL(_uint, unsigned int)
+SERIALIZABLE_IMPL(_short, short int)
+SERIALIZABLE_IMPL(_ushort, unsigned short int)
+SERIALIZABLE_IMPL(_long, long int)
+SERIALIZABLE_IMPL(_ulong, unsigned long int)
+SERIALIZABLE_IMPL(_byte, unsigned char)
+SERIALIZABLE_IMPL(_sbyte, char)
+SERIALIZABLE_IMPL(_char, char)
+SERIALIZABLE_IMPL(_wchar, wchar_t)
+SERIALIZABLE_IMPL(_bool, bool)

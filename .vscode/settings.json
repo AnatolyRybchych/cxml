@@ -5,6 +5,8 @@
         "str_chunk.h": "c",
         "wchar.h": "c",
         "type_traits": "cpp",
-        "stdbool.h": "c"
+        "stdbool.h": "c",
+        "string.h": "c",
+        "alloca.h": "c"
     }
 }

@@ -377,7 +377,7 @@ static bool decl_serialize(const CXML_Serializable *self, CXML_StringWriter *wri
     CXML_Serializable encoding_val = cxml_def.serializable.cstr(decl->encoding);
     CXML_Attribute encoding_attrib = cxml_attribute(&encoding_name, &encoding_val);
     CXML_Serializable encoding_attrib_ser = cxml_def.serializable.attribute(&encoding_attrib);
-    if(!cxml_serialize(&encoding_attrib_ser)) return false;
+    if(!cxml_serialize(&encoding_attrib_ser, writer)) return false;
 
 
     if(!cxml_write(writer, &decl_close)) return false;

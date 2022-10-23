@@ -362,8 +362,8 @@ static bool decl_serialize(const CXML_Serializable *self, CXML_StringWriter *wri
     const CXML_Declaration *decl = (const CXML_Declaration*)self->data;
     decl = decl;//unused
 
-    if(!cxml_write(writer, &decl_open));
-    if(!cxml_write(writer, &decl_close));
+    if(!cxml_write(writer, &decl_open)) return false;
+    if(!cxml_write(writer, &decl_close)) return false;
 
     return true;
 }

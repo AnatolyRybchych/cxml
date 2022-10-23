@@ -302,11 +302,11 @@ static bool tag_serialize(const CXML_Serializable *self, CXML_StringWriter *writ
     cxml_serialize(tag->name, writer);
     if(tag->attribs_cnt){
         if(tag->attribs == NULL) return false;
-        cxml_write(writer, &space);
 
         const CXML_Attribute *curr = tag->attribs;
         const CXML_Attribute *end = curr + tag->attribs_cnt;
         while (curr != end){
+            cxml_write(writer, &space);
             CXML_Serializable attr_serializable = cxml_def.serializable.attribute(curr);
             if(!cxml_serialize(&attr_serializable, writer)) return false;
             curr++;

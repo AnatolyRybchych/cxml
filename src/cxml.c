@@ -31,7 +31,6 @@ static bool skip_close_tag(StrChunk *chunk, const StrChunk *close_tag_name);
 static bool skip_open_tag_open(StrChunk *source);
 static bool skip_simple_tag_end(StrChunk *source);
 static bool skip_attribute_to_value(StrChunk *source);
-static void cp_str_to_wcs(wchar_t *wcs, const char *str, unsigned int cnt);
 
 static bool _write_to_file(CXML_StringWriter *self, const StrChunk *str);
 static CXML_StringWriter _writer_to_file(FILE *file);
@@ -247,13 +246,6 @@ static bool skip_attribute_to_value(StrChunk *source){
     );
 }
 
-static void cp_str_to_wcs(wchar_t *wcs, const char *str, unsigned int cnt){
-    while (cnt){
-        cnt--;
-        wcs[cnt] = str[cnt];
-    }
-}
-
 static bool _write_to_file(CXML_StringWriter *self, const StrChunk *str){
     if(self == NULL || self->data == NULL) return false;
     int chars_cnt = str->end - str->beg;
@@ -286,24 +278,13 @@ static bool wcs_serialize(const CXML_Serializable *self, CXML_StringWriter *writ
 
 static bool cstr_serialize(const CXML_Serializable *self, CXML_StringWriter *writer){
     const char *cstr = (const char *)self->data;
-    int len = strlen(cstr);
-    
-    #define CP_BUF_LEN 256
-    wchar_t wcs[CP_BUF_LEN];
-    while (len > CP_BUF_LEN){
-        cp_str_to_wcs(wcs, cstr, CP_BUF_LEN);
-
-        StrChunk chunk = {.beg = wcs, .end = wcs + CP_BUF_LEN + 1};
-        if(!cxml_write(writer, &chunk)) return false; 
-
-        len -= CP_BUF_LEN;
-        cstr += CP_BUF_LEN;
+    wchar_t curr;
+    StrChunk chunk = {.beg = &curr, .end = &curr + 1};
+    while (*cstr){
+        curr = *cstr++;
+        if(!cxml_write(writer, &chunk)) return false;
     }
-
-    cp_str_to_wcs(wcs, cstr, len);
-
-    StrChunk chunk = {.beg = wcs, .end = wcs + len + 1};
-    if(!cxml_write(writer, &chunk)) return false; 
+    
     else return true;
 }
 

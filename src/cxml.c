@@ -379,6 +379,12 @@ static bool decl_serialize(const CXML_Serializable *self, CXML_StringWriter *wri
     CXML_Serializable encoding_attrib_ser = cxml_def.serializable.attribute(&encoding_attrib);
     if(!cxml_serialize(&encoding_attrib_ser, writer)) return false;
 
+    CXML_Serializable standalone_name = cxml_def.serializable.wcs(L"standalone");
+    CXML_Serializable standalone_val = decl->standalone ?
+        cxml_def.serializable.wcs(L"yes"): cxml_def.serializable.wcs(L"no");
+    CXML_Attribute standalone_attrib = cxml_attribute(&standalone_name, &standalone_val);
+    CXML_Serializable standalone_attrib_ser = cxml_def.serializable.attribute(&standalone_attrib);
+    if(!cxml_serialize(&standalone_attrib_ser, writer)) return false;
 
     if(!cxml_write(writer, &decl_close)) return false;
 

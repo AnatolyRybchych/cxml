@@ -249,8 +249,8 @@ static bool skip_attribute_to_value(StrChunk *source){
 
 static void cp_str_to_wcs(wchar_t *wcs, const char *str, unsigned int cnt){
     while (cnt){
+        cnt--;
         wcs[cnt] = str[cnt];
-        cnt++;
     }
 }
 

@@ -360,41 +360,11 @@ static bool concat_serialize(const CXML_Serializable *self, CXML_StringWriter *w
 
 static bool decl_serialize(const CXML_Serializable *self, CXML_StringWriter *writer){
     const CXML_Declaration *decl = (const CXML_Declaration*)self->data;
-    
-    CXML_Serializable ver_name = cxml_def.serializable.wcs(L"version");
-    CXML_Serializable enc_name = cxml_def.serializable.wcs(L"encoding");
-    CXML_Serializable standalone_name = cxml_def.serializable.wcs(L"standalone");
-    CXML_Serializable ver_val_ser;
-    CXML_Serializable enc_val_ser = cxml_def.serializable.cstr(decl->encoding);
-    CXML_Serializable standalone_val_ser;
-    if(decl->standalone) standalone_val_ser = cxml_def.serializable.wcs(L"yes");
-    else standalone_val_ser = cxml_def.serializable.wcs(L"no");
+    decl = decl;//unused
 
-    // concat version to make maj.min
-    CXML_Serializable ver_maj = cxml_def.serializable._uint(&decl->version_major);
-    CXML_Serializable ver_min = cxml_def.serializable._uint(&decl->version_minor);
-    CXML_Serializable ver_delim = cxml_def.serializable.wcs(L".");
-    
-    CXML_Concat maj_delim = cxml_concat(&ver_maj, &ver_delim);
-    CXML_Serializable maj_delim_ser = cxml_def.serializable.concat(&maj_delim);
-    CXML_Concat ver_val = cxml_concat(&maj_delim_ser, &ver_min);
-    ver_val_ser = cxml_def.serializable.concat(&ver_val);
+    if(!cxml_write(writer, &decl_open));
+    if(!cxml_write(writer, &decl_close));
 
-    CXML_Attribute ver = cxml_attribute(&ver_name, &ver_val_ser);
-    CXML_Attribute enc = cxml_attribute(&enc_name, &enc_val_ser);
-    CXML_Attribute standalone = cxml_attribute(&standalone_name, &standalone_val_ser);
-
-    CXML_Serializable ver_ser = cxml_def.serializable.attribute(&ver);
-    CXML_Serializable enc_ser = cxml_def.serializable.attribute(&enc);
-    CXML_Serializable standalone_ser = cxml_def.serializable.attribute(&standalone);
-
-    if(!cxml_write(writer, &decl_open)) return false;
-    if(!cxml_serialize(&ver_ser, writer)) return false;
-    if(!cxml_write(writer, &space)) return false;
-    if(!cxml_serialize(&enc_ser, writer)) return false;
-    if(!cxml_write(writer, &space)) return false;
-    if(!cxml_serialize(&standalone_ser, writer)) return false;
-    if(!cxml_write(writer, &decl_close)) return false;
     return true;
 }
 

@@ -360,7 +360,6 @@ static bool concat_serialize(const CXML_Serializable *self, CXML_StringWriter *w
 
 static bool decl_serialize(const CXML_Serializable *self, CXML_StringWriter *writer){
     const CXML_Declaration *decl = (const CXML_Declaration*)self->data;
-    decl = decl;//unused
 
     if(!cxml_write(writer, &decl_open)) return false;
     CXML_Serializable version_name = cxml_def.serializable.wcs(L"version=\"");
@@ -373,6 +372,13 @@ static bool decl_serialize(const CXML_Serializable *self, CXML_StringWriter *wri
         && cxml_serialize(&version_delim, writer)
         && cxml_serialize(&version_min, writer)
         && cxml_serialize(&version_end, writer))) return false;
+    
+    CXML_Serializable encoding_name = cxml_def.serializable.wcs(L"encoding");
+    CXML_Serializable encoding_val = cxml_def.serializable.cstr(decl->encoding);
+    CXML_Attribute encoding_attrib = cxml_attribute(&encoding_name, &encoding_val);
+    CXML_Serializable encoding_attrib_ser = cxml_def.serializable.attribute(&encoding_attrib);
+    if(!cxml_serialize(&encoding_attrib_ser)) return false;
+
 
     if(!cxml_write(writer, &decl_close)) return false;
 

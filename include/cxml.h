@@ -10,6 +10,7 @@ typedef struct CXML_Serializable CXML_Serializable;
 typedef struct CXML_Tag CXML_Tag;
 typedef struct CXML_Concat CXML_Concat;
 typedef struct CXML_Attribute CXML_Attribute;
+typedef struct CXML_Declaration CXML_Declaration;
 
 typedef void(*CXML_OnTagHandler)(const StrChunk *tag_name, const StrChunk *inner_text, const StrChunk *attributes, void *user_data);
 typedef void(*CXML_OnAttributeHandler)(const StrChunk *attribute_name, const StrChunk *attribute_value, void *user_data);
@@ -24,6 +25,7 @@ CXML_Attribute cxml_attribute(const CXML_Serializable *name, const CXML_Serializ
 CXML_Tag cxml_tag(const CXML_Serializable *name, const CXML_Attribute *attribs, unsigned int attribs_cnt, const CXML_Serializable *value);
 CXML_Serializable cxml_serializable(const void *data, bool (*serialize)(const CXML_Serializable *serializable, CXML_StringWriter *writer));
 CXML_Concat cxml_concat(const CXML_Serializable *first, CXML_Serializable *second);
+CXML_Declaration cxml_default_declaration(void);
 
 struct CXML_StringWriter{
     void *data;
@@ -45,6 +47,7 @@ struct CXML_DefaultSerializables{
     CXML_Serializable (*attribute)(const CXML_Attribute *attrib);
     CXML_Serializable (*tag)(const CXML_Tag *tag);
     CXML_Serializable (*concat)(const CXML_Concat *concat);
+    CXML_Serializable (*decl)(const CXML_Declaration *decl);
     CXML_Serializable (*_float)(const float *_float);
     CXML_Serializable (*_double)(const double *_double);
     CXML_Serializable (*_bool)(const bool *_bool);
@@ -80,6 +83,13 @@ struct CXML_Tag{
 struct CXML_Concat{
     const CXML_Serializable *first;
     const CXML_Serializable *second;
+};
+
+struct CXML_Declaration{
+    unsigned int version_major;
+    unsigned int version_minor;
+    char encoding[32];
+    bool standalone;
 };
 
 

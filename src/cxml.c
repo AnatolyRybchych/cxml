@@ -23,6 +23,8 @@ STATIC_VAR_STR_CHUNK(slash, L"/");
 STATIC_VAR_STR_CHUNK(attrib_name_end, SC_WHITE_SPACES"=");
 STATIC_VAR_STR_CHUNK(eq, L"=");
 STATIC_VAR_STR_CHUNK(quotes, L"\"");
+VAR_STR_CHUNK(decl_open, L"<?xml ");
+VAR_STR_CHUNK(decl_close, L"?>");
 
 static bool skip_to_close_tag(StrChunk *chunk, const StrChunk *close_tag_name);
 static bool skip_close_tag(StrChunk *chunk, const StrChunk *close_tag_name);
@@ -39,6 +41,7 @@ CXML_DEF_DECL(cstr, char);
 CXML_DEF_DECL(tag, CXML_Tag);
 CXML_DEF_DECL(attribute, CXML_Attribute);
 CXML_DEF_DECL(concat, CXML_Concat);
+CXML_DEF_DECL(decl, CXML_Declaration);
 CXML_DEF_DECL(_float, float);
 CXML_DEF_DECL(_double, double);
 CXML_DEF_DECL(_int, int);
@@ -63,6 +66,7 @@ struct CXML_DefaultWrappers cxml_def = {
         .attribute = attribute_serializable,
         .tag = tag_serializable,
         .concat = concat_serializable,
+        .decl = decl_serializable,
         ._float = _float_serializable, 
         ._double = _double_serializable,
         ._bool = _bool_serializable,
@@ -172,6 +176,15 @@ CXML_Concat cxml_concat(const CXML_Serializable *first, CXML_Serializable *secon
     return (CXML_Concat){
         .first = first,
         .second = second
+    };
+}
+
+CXML_Declaration cxml_default_declaration(void){
+    return (CXML_Declaration){
+        .version_major = 1,
+        .version_minor = 0,
+        .encoding = {'U', 'T', 'F', '-', '8', 0},
+        .standalone = true,
     };
 }
 
@@ -345,6 +358,47 @@ static bool concat_serialize(const CXML_Serializable *self, CXML_StringWriter *w
     return cxml_serialize(concat->first, writer) && cxml_serialize(concat->second, writer);
 }
 
+static bool decl_serialize(const CXML_Serializable *self, CXML_StringWriter *writer){
+    const CXML_Declaration *decl = (const CXML_Declaration*)self->data;
+    
+    CXML_Serializable ver_name = cxml_def.serializable.wcs(L"version");
+    CXML_Serializable enc_name = cxml_def.serializable.wcs(L"encoding");
+    CXML_Serializable standalone_name = cxml_def.serializable.wcs(L"standalone");
+    CXML_Serializable ver_val_ser;
+    CXML_Serializable enc_val_ser = cxml_def.serializable.cstr(decl->encoding);
+    CXML_Serializable standalone_val_ser;
+    if(decl->standalone) standalone_val_ser = cxml_def.serializable.wcs(L"yes");
+    else standalone_val_ser = cxml_def.serializable.wcs(L"no");
+
+    // concat version to make maj.min
+    CXML_Serializable ver_maj = cxml_def.serializable._uint(&decl->version_major);
+    CXML_Serializable ver_min = cxml_def.serializable._uint(&decl->version_minor);
+    CXML_Serializable ver_delim = cxml_def.serializable.wcs(L".");
+    
+    CXML_Concat maj_delim = cxml_concat(&ver_maj, &ver_delim);
+    CXML_Serializable maj_delim_ser = cxml_def.serializable.concat(&maj_delim);
+    CXML_Concat ver_val = cxml_concat(&maj_delim_ser, &ver_min);
+    ver_val_ser = cxml_def.serializable.concat(&ver_val);
+
+    CXML_Attribute ver = cxml_attribute(&ver_name, &ver_val_ser);
+    CXML_Attribute enc = cxml_attribute(&enc_name, &enc_val_ser);
+    CXML_Attribute standalone = cxml_attribute(&standalone_name, &standalone_val_ser);
+
+    CXML_Serializable ver_ser = cxml_def.serializable.attribute(&ver);
+    CXML_Serializable enc_ser = cxml_def.serializable.attribute(&enc);
+    CXML_Serializable standalone_ser = cxml_def.serializable.attribute(&standalone);
+
+    if(!cxml_write(writer, &decl_open)) return false;
+    if(!cxml_serialize(&ver_ser, writer)) return false;
+    if(!cxml_write(writer, &space)) return false;
+    if(!cxml_serialize(&enc_ser, writer)) return false;
+    if(!cxml_write(writer, &space)) return false;
+    if(!cxml_serialize(&standalone_ser, writer)) return false;
+    if(!cxml_write(writer, &decl_close)) return false;
+    return true;
+}
+
+
 SERIALIZE_FORMAT_IMPL(_float, SERIALIZE_BUF_LEN, L"%f", *(float*)self->data)
 SERIALIZE_FORMAT_IMPL(_double, SERIALIZE_BUF_LEN, L"%lf", *(double*)self->data)
 SERIALIZE_FORMAT_IMPL(_int, SERIALIZE_BUF_LEN, L"%i", *(int*)self->data)
@@ -364,6 +418,7 @@ SERIALIZABLE_IMPL(cstr, char)
 SERIALIZABLE_IMPL(attribute, CXML_Attribute)
 SERIALIZABLE_IMPL(tag, CXML_Tag)
 SERIALIZABLE_IMPL(concat, CXML_Concat)
+SERIALIZABLE_IMPL(decl, CXML_Declaration)
 SERIALIZABLE_IMPL(_float, float)
 SERIALIZABLE_IMPL(_double, double)
 SERIALIZABLE_IMPL(_int, int)

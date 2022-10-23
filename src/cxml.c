@@ -363,6 +363,17 @@ static bool decl_serialize(const CXML_Serializable *self, CXML_StringWriter *wri
     decl = decl;//unused
 
     if(!cxml_write(writer, &decl_open)) return false;
+    CXML_Serializable version_name = cxml_def.serializable.wcs(L"version=\"");
+    CXML_Serializable version_maj = cxml_def.serializable._uint(&decl->version_major);
+    CXML_Serializable version_delim = cxml_def.serializable.wcs(L".");
+    CXML_Serializable version_min = cxml_def.serializable._uint(&decl->version_minor);
+    CXML_Serializable version_end = cxml_def.serializable.wcs(L"\" ");
+    if(!(cxml_serialize(&version_name, writer)
+        && cxml_serialize(&version_maj, writer)
+        && cxml_serialize(&version_delim, writer)
+        && cxml_serialize(&version_min, writer)
+        && cxml_serialize(&version_end, writer))) return false;
+
     if(!cxml_write(writer, &decl_close)) return false;
 
     return true;

@@ -7,7 +7,7 @@
 
 #define SC_WHITE_SPACES L" \n\t\v\f\r"
 
-#define _VAR_STR_CHUNK(MOD, NAME, WCS) MOD wchar_t _data_##NAME[] = WCS;MOD StrChunk NAME = {.beg = _data_##NAME, .end = _data_##NAME + sizeof(_data_##NAME) / sizeof(*_data_##NAME) - 1}
+#define _VAR_STR_CHUNK(MOD, NAME, WCS) MOD unsigned short int _data_##NAME[] = WCS;MOD StrChunk NAME = {.beg = _data_##NAME, .end = _data_##NAME + sizeof(_data_##NAME) / sizeof(*_data_##NAME) - 1}
 #define VAR_STR_CHUNK(NAME, WCS) _VAR_STR_CHUNK(,NAME,WCS)
 #define STATIC_VAR_STR_CHUNK(NAME, WCS) _VAR_STR_CHUNK(static,NAME,WCS)
 

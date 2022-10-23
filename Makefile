@@ -3,6 +3,7 @@ CC		:= gcc
 CARGS	:= -Iinclude -c -Wall -Wextra -Werror -pedantic
 LNK_ARGS:= -shared -Iinclude -Wall -Wextra -Werror -pedantic
 DLL_NAME:= ./bin/libcxml.dll
+SLL_NAME:= ./lib/libcxml.a
 
 objects	+= str_chunk.o
 objects	+= cxml.o
@@ -13,9 +14,9 @@ build_dll: $(addprefix obj/, $(objects))
 	@mkdir -p ./bin
 	$(CC) $(LNK_ARGS) -o $(DLL_NAME) $^
 
-build_static:
+build_static:$(addprefix obj/, $(objects))
 	@mkdir -p ./lib
-	ar -crs ./lib/libcxml.a $^
+	ar rcs $(SLL_NAME) $^
 
 obj/%.o:src/%.c
 	@mkdir -p ./obj

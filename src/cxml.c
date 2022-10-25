@@ -93,13 +93,13 @@ bool cxml_iter_tag(const StrChunk *source, StrChunk *actualChunk, CXML_OnTagHand
 
     sc_skip_copy_all_to(&cp, &tag_name, &tag_name_end);
     sc_skip_copy_all_to(&cp, &attributes, &tag_end);
-    sc_skip_one(&cp, &tag_end, false);
 
     if(skip_simple_tag_end(&cp)){
        inner_text = (StrChunk){cp.beg, cp.beg};
        actual.end = cp.beg;
     }
     else{
+        sc_skip_one(&cp, &gt, false);
         inner_text.beg = cp.beg;
         if(skip_to_close_tag(&cp, &tag_name)){
             inner_text.end = cp.beg;

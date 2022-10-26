@@ -25,6 +25,8 @@ STATIC_VAR_STR_CHUNK(eq, L"=");
 STATIC_VAR_STR_CHUNK(quotes, L"\"");
 VAR_STR_CHUNK(decl_open, L"<?xml ");
 VAR_STR_CHUNK(decl_close, L"?>");
+VAR_STR_CHUNK(minus_minus, L"--");
+VAR_STR_CHUNK(excl, L"!");
 
 static bool skip_to_close_tag(StrChunk *chunk, const StrChunk *close_tag_name);
 static bool skip_close_tag(StrChunk *chunk, const StrChunk *close_tag_name);
@@ -32,6 +34,9 @@ static bool skip_open_tag_open(StrChunk *source);
 static bool skip_simple_tag_end(StrChunk *source);
 static bool skip_attribute_to_value(StrChunk *source);
 static void cp_str_to_wcs(wchar_t *wcs, const char *str, unsigned int cnt);
+static bool skip_comment(StrChunk *source);
+//returns count of skipped comments
+static int skip_comments(StrChunk *source);
 
 static bool _write_to_file(CXML_StringWriter *self, const StrChunk *str);
 static CXML_StringWriter _writer_to_file(FILE *file);
@@ -87,8 +92,9 @@ bool cxml_iter_tag(const StrChunk *source, StrChunk *actualChunk, CXML_OnTagHand
     StrChunk tag_name, inner_text, attributes;
     StrChunk cp = *source;
     sc_skip_all_whitespaces(&cp);
+    skip_comments(&cp);
     StrChunk actual = {.beg = cp.beg, .end = cp.end};
-
+    
     if(skip_open_tag_open(&cp) == false) return false;;
 
     sc_skip_copy_all_to(&cp, &tag_name, &tag_name_end);
@@ -252,6 +258,36 @@ static void cp_str_to_wcs(wchar_t *wcs, const char *str, unsigned int cnt){
         cnt--;
         wcs[cnt] = str[cnt];
     }
+}
+
+static int skip_comments(StrChunk *source){
+    int result = 0;
+    while (skip_comment(source)){
+        result++;
+    }
+    return result;
+}
+
+static bool skip_comment(StrChunk *source){
+    StrChunk cp = *source;
+    bool open_comment = sc_skip_start_matches_all(&cp, 
+        SC_MAYBE_SOME_IN, sc_get_whitespaces(),
+        SC_ONE_IN, &lt,
+        SC_MAYBE_SOME_IN, sc_get_whitespaces(),
+        SC_ONE_IN, &excl,
+        SC_MAYBE_SOME_IN, sc_get_whitespaces(),
+        SC_SEQUANCE, &minus_minus,
+        SC_STOP);
+    if(!open_comment) return false;
+
+    bool close_comment = sc_skip_to_start_matches_all_including(&cp,
+        SC_SEQUANCE, &minus_minus,
+        SC_MAYBE_SOME_IN, sc_get_whitespaces(),
+        SC_ONE_IN, &gt,
+        SC_MAYBE_SOME_IN, sc_get_whitespaces(),
+        SC_STOP);
+    if(!close_comment) return false;
+    else return *source = cp, true;
 }
 
 static bool _write_to_file(CXML_StringWriter *self, const StrChunk *str){

@@ -182,13 +182,14 @@ bool sc_skip_to_start_matches_all(StrChunk *source, StrChunkCondition condition1
 
 bool sc_skip_to_start_matches_all_including(StrChunk *source, StrChunkCondition condition1, const StrChunk *sample1, ...){
     StrChunk cp = *source;
-    while (source->beg < source->end){
+    while (cp.beg < source->end){
         va_list argp;
         va_start(argp, sample1);
         if(sc_skip_start_matches_all_v(&cp, condition1, sample1, argp)){
             *source = cp;
             return true;
         }
+        cp.beg++;
     }
     return false;
 }

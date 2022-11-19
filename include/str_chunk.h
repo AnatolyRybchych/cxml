@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <wchar.h>
 #include <math.h>
+#include <stdarg.h>
 
 #define SC_WHITE_SPACES L" \n\t\v\f\r"
 

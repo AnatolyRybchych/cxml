@@ -1,6 +1,6 @@
 
 CC		:= gcc
-CARGS	:= -Iinclude -c -Wall -Wextra -Werror -pedantic
+CARGS	:= -fPIC -Iinclude -c -Wall -Wextra -Werror -pedantic
 LNK_ARGS:= -shared -Iinclude -Wall -Wextra -Werror -pedantic
 DLL_NAME:= ./bin/libcxml.dll
 SLL_NAME:= ./lib/libcxml.a

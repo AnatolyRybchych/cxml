@@ -27,6 +27,9 @@ VAR_STR_CHUNK(decl_open, L"<?xml ");
 VAR_STR_CHUNK(decl_close, L"?>");
 VAR_STR_CHUNK(minus_minus, L"--");
 VAR_STR_CHUNK(excl, L"!");
+VAR_STR_CHUNK(question_mark, L"?");
+VAR_STR_CHUNK(xml, L"xml");
+VAR_STR_CHUNK(white_spaces, SC_WHITE_SPACES);
 
 static bool skip_to_close_tag(StrChunk *chunk, const StrChunk *close_tag_name);
 static bool skip_close_tag(StrChunk *chunk, const StrChunk *close_tag_name);
@@ -87,6 +90,82 @@ struct CXML_DefaultWrappers cxml_def = {
         ._wchar = _wchar_serializable,
     },
 };
+
+static void on_declaration_attribute(const StrChunk *attribute_name, const StrChunk *attribute_value, void *user_data){
+    CXML_Declaration *decl = user_data;
+    if(sc_equals(attribute_name, L"version")){
+        if(attribute_value->end - attribute_value->beg >= 3){
+            decl->version_major = attribute_value->beg[0] - '0';
+            decl->version_minor = attribute_value->beg[2] - '0';
+        }
+    }
+    else if(sc_equals(attribute_name, L"encoding")){
+        int len = attribute_value->end - attribute_value->beg;
+        if(len > 32) len = 32;
+
+        decl->encoding[--len] = 0;
+        while (len){
+            decl->encoding[len] = attribute_value->beg[len];
+            len--;
+        }
+    }
+    else if(sc_equals(attribute_name, L"standalone")){
+        if(sc_equals(attribute_value, L"yes")){
+            decl->standalone = true;
+        }
+        else{
+            decl->standalone = false;
+        }
+    }
+}
+
+bool cxml_read_decl(const StrChunk *source, StrChunk *actualChunk, CXML_Declaration *decl){
+    StrChunk cp = *source;
+
+    strcpy(decl->encoding, "UTF-8");
+    decl->standalone = false;
+    decl->version_minor = 0;
+    decl->version_major = 1;
+
+    sc_skip_all_whitespaces(&cp);
+    actualChunk->beg = cp.beg;
+
+    if(!sc_skip_start_matches_all(&cp, 
+        SC_SEQUANCE, &lt,
+        SC_MAYBE_SOME_IN, &white_spaces,
+        SC_SEQUANCE, &question_mark,
+        SC_MAYBE_SOME_IN, &white_spaces,
+        SC_SEQUANCE, &xml,
+        SC_MAYBE_SOME_IN, &white_spaces,
+        SC_STOP)) return false;
+    
+    StrChunk attribs = cp;
+    if(!sc_skip_to_start_matches_all(&attribs,
+        SC_MAYBE_SOME_IN, &white_spaces,
+        SC_SEQUANCE, &question_mark,
+        SC_MAYBE_SOME_IN, &white_spaces,
+        SC_SEQUANCE, &gt,
+        SC_STOP)) return false;
+    
+    StrChunk close_tag = {attribs.beg, attribs.end};
+    attribs.end = attribs.beg;
+    attribs.beg = cp.beg;
+
+    sc_skip_start_matches_all(&close_tag,
+        SC_MAYBE_SOME_IN, &white_spaces,
+        SC_SEQUANCE, &question_mark,
+        SC_MAYBE_SOME_IN, &white_spaces,
+        SC_SEQUANCE, &gt,
+        SC_STOP);
+
+    actualChunk->end = close_tag.beg;
+
+    if(!cxml_iter_attributes(
+        &attribs, on_declaration_attribute, decl
+    ))return false;;
+
+    return true;
+}
 
 bool cxml_iter_tag(const StrChunk *source, StrChunk *actualChunk, CXML_OnTagHandler on_tag, void *user_data){
     StrChunk tag_name, inner_text, attributes;
@@ -338,7 +417,7 @@ static bool cstr_serialize(const CXML_Serializable *self, CXML_StringWriter *wri
 
     cp_str_to_wcs(wcs, cstr, len);
 
-    StrChunk chunk = {.beg = wcs, .end = wcs + len + 1};
+    StrChunk chunk = {.beg = wcs, .end = wcs + len};
     if(!cxml_write(writer, &chunk)) return false; 
     else return true;
 }
@@ -397,6 +476,8 @@ static bool concat_serialize(const CXML_Serializable *self, CXML_StringWriter *w
 static bool decl_serialize(const CXML_Serializable *self, CXML_StringWriter *writer){
     const CXML_Declaration *decl = (const CXML_Declaration*)self->data;
 
+    CXML_Serializable space = cxml_def.serializable.wcs(L" ");
+
     if(!cxml_write(writer, &decl_open)) return false;
     CXML_Serializable version_name = cxml_def.serializable.wcs(L"version=\"");
     CXML_Serializable version_maj = cxml_def.serializable._uint(&decl->version_major);
@@ -414,6 +495,7 @@ static bool decl_serialize(const CXML_Serializable *self, CXML_StringWriter *wri
     CXML_Attribute encoding_attrib = cxml_attribute(&encoding_name, &encoding_val);
     CXML_Serializable encoding_attrib_ser = cxml_def.serializable.attribute(&encoding_attrib);
     if(!cxml_serialize(&encoding_attrib_ser, writer)) return false;
+    if(!cxml_serialize(&space, writer)) return false;
 
     CXML_Serializable standalone_name = cxml_def.serializable.wcs(L"standalone");
     CXML_Serializable standalone_val = decl->standalone ?

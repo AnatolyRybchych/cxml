@@ -17,6 +17,7 @@ typedef void(*CXML_OnAttributeHandler)(const StrChunk *attribute_name, const Str
 
 extern struct CXML_DefaultWrappers cxml_def;
 
+bool cxml_read_decl(const StrChunk *source, StrChunk *actualChunk, CXML_Declaration *decl);
 bool cxml_iter_tag(const StrChunk *source, StrChunk *actualChunk, CXML_OnTagHandler on_tag, void *user_data);
 bool cxml_iter_attributes(const StrChunk *source, CXML_OnAttributeHandler on_attribute, void *user_data);
 bool cxml_write(CXML_StringWriter *writer, const StrChunk *str);

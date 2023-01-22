@@ -1,6 +1,6 @@
 
 CC		:= gcc
-CARGS	:= -fPIC -Iinclude -c -Wall -Wextra -Werror -pedantic
+CARGS	:= -c -fPIC -Iinclude -Wall -Wextra -Werror -pedantic
 LNK_ARGS:= -shared -Iinclude -Wall -Wextra -Werror -pedantic
 DLL_NAME:= ./bin/libcxml.dll
 SLL_NAME:= ./lib/libcxml.a
@@ -21,3 +21,18 @@ build_static:$(addprefix obj/, $(objects))
 obj/%.o:src/%.c
 	@mkdir -p ./obj
 	$(CC) $(CARGS) -o $@ $^
+
+
+#################################################################
+# TESTS
+
+tests_bin += test1
+
+tests: build_static build_tests
+	./test_bin/test1
+
+build_tests: $(addprefix test_bin/, $(tests_bin))
+
+test_bin/%:test/%.c
+	@mkdir -p $(dir $@)
+	$(CC) -o $@ -Iinclude -Wall -Wextra -Werror -pedantic $^ -Llib -l:libcxml.a -lm
